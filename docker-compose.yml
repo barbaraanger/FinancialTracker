@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_SCHEMA: ${DB_DEFAULT_SCHEMA}
+    ports:
+      - "5000:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - expense-tracker-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U expense_tracker_user -d expense_tracker" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    restart: always
+    env_file:
+      - .env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME:  ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_DB_DEFAULT_SCHEMA: ${DB_DEFAULT_SCHEMA}
+    depends_on:
+      - db
+    networks:
+      - expense-tracker-network
+
+volumes:
+  postgres_data:
+
+networks:
+  expense-tracker-network:
